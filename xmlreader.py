@@ -1,6 +1,37 @@
 import os
 import xml.etree.ElementTree as ET
 import pandas as pd
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.lib import colors
+
+
+def create_pdf(file_path, data):
+    pdf = SimpleDocTemplate(file_path, pagesize=A4)
+
+    table_data = []
+
+    for key, value in data[0].items():
+        table_data.append(value)
+
+    table_data.sort()
+    table_data.insert(0, ["Produto", "Quantidade"])
+
+    style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+    ])
+
+    table = Table(table_data)
+    table.setStyle(style)
+
+    elements = [table]
+    pdf.build(elements)
+
 
 diretorio = "/home/fabio/Projects/xmlreader"
 
@@ -15,7 +46,7 @@ arquivos_xml = [arquivo for arquivo in os.listdir(
 produtos_totais = {}
 trocas = []
 observacoes = []
-fora_rota = []
+fora_de_rota = []
 
 for arquivo_xml in arquivos_xml:
     caminho_arquivo_xml = os.path.join(diretorio, arquivo_xml)
@@ -31,12 +62,12 @@ for arquivo_xml in arquivos_xml:
             observacoes.append(
                 [planilha_clientes['nome'][index], planilha_clientes['observação'][index]])
 
-    cidades = root.find(
-        ".//{http://www.portalfiscal.inf.br/nfe}dest/{http://www.portalfiscal.inf.br/nfe}enderDest/{http://www.portalfiscal.inf.br/nfe}/cMun").text
-    
-    for cidade in cidades:
-        if cidade in planilha_cidades['suzano']:
-            
+    # cidades = root.find(
+    #     ".//{http://www.portalfiscal.inf.br/nfe}dest/{http://www.portalfiscal.inf.br/nfe}enderDest/{http://www.portalfiscal.inf.br/nfe}/cMun").text
+
+    # for cidade in cidades:
+    #     if cidade in planilha_cidades['suzano']:
+    #         print("teste")
 
     produtos = root.findall(".//{http://www.portalfiscal.inf.br/nfe}det")
 
@@ -52,10 +83,12 @@ for arquivo_xml in arquivos_xml:
         ).text
 
         if codigo_produto in produtos_totais:
-            produtos_totais[codigo_produto]["quantidade"] += float(
+            produtos_totais[codigo_produto][1] += float(
                 quantidade_produto)
         else:
-            produtos_totais[codigo_produto] = {
-                'nome': nome_produto, 'quantidade': float(quantidade_produto)}
+            produtos_totais[codigo_produto] = [
+                nome_produto, float(quantidade_produto)]
 
-print(produtos_totais)
+data = [produtos_totais, trocas, observacoes, fora_de_rota]
+
+create_pdf("impressao.pdf", data)
